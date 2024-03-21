@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Document</title>
+    <link href="css/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <h1>Websockets - <small>Status</small></h1>
+
+    <form>
+      <input type="text" placeholder="Enviar mensaje"/>
+      <button>Enviar</button>
+    </form>
+
+    <ul id="messages">
+      
+    </ul>
+
+    <script>
+      //console.log('Hola mundo');
+      // Referencias al formulario y al input
+      
+      let socket = null;
+
+      const form = document.querySelector('form');
+      const input = document.querySelector('input');
+      const messagesContainerElem = document.querySelector('#messages');
+      const statusElem = document.querySelector('small');// busca en archivo index.html el primer elemento html small
+
+      function sendMessage(message) {
+        socket?.send(message);// Enviar mensaje al websocket (wss) que apunta al puerto 3000
+      }
+
+      function renderMessage(message) {
+        const li = document.createElement('li');// crear un <li>
+        li.innerHTML = message;
+        messagesContainerElem.prepend(li);// insertar el <li> justo despues de <ul> y antes del <li> que pueda estar o no
+      }
+
+      // Configurar el formulario form de modo que, cuando en el input se de enter (submit), se ejecute la funcion de flecha
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();// Previene la propagacion y recarga del navegador web
+        const message = input.value;
+        sendMessage(message);
+        input.value = null;
+      });
+
+
+      
+      function connectToWebSocketServer() {
+        
+        socket = new WebSocket('ws://localhost:3000');// Conectarse al websocketserver el cual apunta al puerto 3000 de la computadora donde se levanta dicho websocketserver
+        
+        // Cuando se conecta al websocketserver... imprimir "Connected" en consola
+        socket.onopen = (event) => {
+          //console.log(event);// event contiene toda la informacion del socket, es decir, toda la informacion del evento sucedido sobre el socket
+          console.log('Connected');
+          statusElem.innerText = 'Online';
+
+        }
+        
+        // Cuando el websocketserver se cae o deja de funcionar por algun motivo....
+        socket.onclose = (event) => {
+          //console.log(event);
+          console.log('Disconnected');
+          statusElem.innerText = 'Offline';
+          setTimeout(()=>{
+            
+            connectToWebSocketServer();
+
+          }, 1000 * Math.floor(Math.random() * 4) + 1);// En caso de que el websocketserver se caiga, que cada socket del cliente que ocupe esta aplicacion web index.html, se intente reconectar a dicho websocketserver cada cierto tiempo en segundos aleatorio. Esto es implementado asi para no bolbardear las conexiones a dicho websocketserver cada periodo de tiempo definido (en lugar de aleatorio) pues si hubieran 1 millon de clientes usando esta aplicacion web index.html en su navegador web y de pronto el websocketserver se desconecta, ese millon de clientes, cada periodo de tiempo, intentarian conectarse o reconectarse a dicho websocketserver. 
+        }
+        
+        // Cuando se Reciban mensajes del websocketserver...
+        socket.onmessage = ( event ) => {
+          //console.log( event );// Tiene mucha informacion. "event" es un objeto que tiene la propiedad data (event.data), que es un string enviado por el websocketserver que apunta al puerto 3000 gracias al programa app.ts de 11-websockets
+          //console.log( event.data );
+          const {payload} = JSON.parse( event.data );
+        
+          renderMessage( payload );
+
+        }
+    
+      }
+
+      connectToWebSocketServer();
+
+    </script>
+
+  </body>
+</html>
